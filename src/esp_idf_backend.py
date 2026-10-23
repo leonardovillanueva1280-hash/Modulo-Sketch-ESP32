@@ -100,7 +100,13 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
                 check=False,
             )
 
-            if configuracion.returncode != 0:
+                  if configuracion.returncode != 0:
+                detalle = (
+                    configuracion.stderr.strip()
+                    or configuracion.stdout.strip()
+                    or "ESP-IDF no proporciono detalles adicionales."
+                )
+
                 return crear_resultado(
                     returncode=configuracion.returncode,
                     stdout=configuracion.stdout,
@@ -109,7 +115,10 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
                     proyecto=proyecto,
                     build=build,
                     target=target,
-                    error="No se pudo configurar el objetivo ESP-IDF.",
+                    error=(
+                        "No se pudo configurar el objetivo ESP-IDF. "
+                        f"Detalle: {detalle}"
+                    ),
                 )
 
         comando_build = [idf_py, "build"]

@@ -1,80 +1,50 @@
-# Flujo y arquitectura — Modulo Sketch ESP32
+# Flujo y arquitectura - Modulo Sketch ESP32
 
 ## 1. Flujo principal
 
-**Solicitud de compilacion → validacion del proyecto → ejecucion del backend ESP-IDF → recopilacion del resultado → identificacion de artefactos → comunicacion del resultado.**
+**Solicitud de compilacion -> validacion del proyecto ESP-IDF -> configuracion opcional del objetivo -> ejecucion de la compilacion -> identificacion de artefactos -> resultado JSON.**
 
-La carga de firmware a una placa fisica es una operacion independiente. No se considera implementada hasta que se integre y se pruebe con hardware real.
+La integracion con Log/Monitorizacion y los demas modulos debe respetar el contrato de integracion acordado.
+
+La carga al ESP32 es una operacion independiente y solo se considerara implementada cuando exista una prueba satisfactoria con hardware real.
+
+**Nota de compatibilidad:** ESP-IDF utiliza proyectos basados en CMake. No compila directamente un archivo `.ino` como un proyecto ESP-IDF convencional. La integracion con el editor debe definir como se organiza o adapta el codigo antes de compilarlo.
 
 ## 2. Componentes
 
-### Interfaz Sketch
+- **Interfaz Sketch:** debe recibir el codigo o la ruta del proyecto, el objetivo de compilacion y la accion solicitada.
+- **Backend ESP-IDF:** valida el proyecto, ejecuta las operaciones admitidas y devuelve un resultado JSON normalizado.
+- **Editor/Compilador:** debe proporcionar un proyecto compatible con ESP-IDF y recibir el resultado conforme al contrato.
+- **Log/Monitorizacion:** debe mostrar o registrar los mensajes, advertencias y errores de cada operacion.
+- **IDE principal:** debe coordinar la configuracion y la comunicacion entre modulos.
+- **Gestion de artefactos:** identifica los archivos generados por una compilacion exitosa y comunica sus ubicaciones.
 
-- Recibe la accion solicitada por el usuario.
-- Proporciona la ruta del proyecto y el objetivo de compilacion, cuando corresponda.
-- Muestra el resultado de la operacion.
+Los componentes que todavia no se han conectado deben considerarse pendientes de integracion.
 
-### Backend ESP-IDF
+## 3. Principios de diseno
 
-- Recibe la ruta de un proyecto ESP-IDF.
-- Ejecuta las operaciones de compilacion admitidas.
-- Captura el codigo de salida y los mensajes del proceso.
-- Identifica los archivos `.bin` disponibles.
-- Devuelve el resultado en formato JSON.
-
-### Editor/Compilador
-
-- Proporciona el codigo que se desea compilar.
-- Debe definir como preparar un proyecto compatible con ESP-IDF.
-- Debe acordar con Sketch la forma de entregar el proyecto al backend.
-
-ESP-IDF utiliza proyectos basados en CMake. Un archivo `.ino` aislado no se compila directamente como un proyecto ESP-IDF convencional. La adaptacion del codigo del editor sigue siendo un punto de integracion que debe definirse.
-
-### Log/Monitorizacion
-
-- Presenta los mensajes de compilacion.
-- Permite distinguir resultados exitosos, advertencias y errores.
-- Facilita el diagnostico de fallos.
-
-La comunicacion efectiva con este modulo debe validarse mediante pruebas conjuntas.
-
-### Gestion de artefactos
-
-- Identifica los archivos generados por el proceso.
-- Devuelve las rutas de los artefactos encontrados.
-- Evita considerar archivos auxiliares como resultados principales de la compilacion.
-
-## 3. Flujo detallado
-
-1. El usuario solicita compilar un proyecto.
-2. Sketch obtiene la ruta del proyecto y el objetivo solicitado.
-3. El backend valida la entrada y ejecuta ESP-IDF.
-4. El proceso de compilacion devuelve un codigo de salida y mensajes.
-5. El backend recopila la informacion y busca los artefactos `.bin`.
-6. El resultado se devuelve a Sketch.
-7. La interfaz y el modulo Log presentan el resultado segun el contrato de integracion acordado.
-
-## 4. Principios de diseno
-
+- Separar el backend de la interfaz.
 - Utilizar ESP-IDF como sistema de compilacion, sin depender de Arduino IDE ni Arduino CLI.
-- Mantener separado el backend de la interfaz.
-- Validar la ruta del proyecto antes de iniciar la operacion.
-- Capturar el codigo de salida y los mensajes del proceso.
-- No declarar una compilacion exitosa cuando el proceso termina con error.
-- No presentar archivos antiguos como resultados de una compilacion fallida.
-- No asumir que todas las placas ESP32 utilizan el mismo objetivo.
-- Tratar la carga fisica y la monitorizacion serial como operaciones independientes hasta implementarlas y validarlas.
+- Validar la existencia del proyecto y de su archivo `CMakeLists.txt`.
+- Identificar explicitamente el objetivo de compilacion.
+- Capturar la salida estandar, los errores y el codigo de retorno.
+- Identificar la carpeta de compilacion y los artefactos generados.
+- No declarar una compilacion exitosa si el proceso termina con error.
+- No presentar archivos `.bin` antiguos como resultado de una compilacion fallida.
+- No asumir que todas las placas ESP32 utilizan la misma configuracion o generan exactamente los mismos artefactos.
+- Mantener la carga fisica y la monitorizacion serial como operaciones independientes hasta implementar y validar su integracion.
 - No declarar terminada la integracion entre modulos antes de ejecutar pruebas conjuntas.
 
-## 5. Estado de validacion
+## 4. Estado de validacion
 
-- Entorno ESP-IDF 6.1: verificado.
-- Compilacion del ejemplo `hello_idf`: completada correctamente.
-- Identificacion de `hello_idf.bin`, `bootloader.bin` y `partition-table.bin`: verificada para el ejemplo.
-- Integracion del backend con la interfaz Sketch: pendiente.
-- Comunicacion con Editor/Compilador: pendiente.
-- Comunicacion con Log: pendiente.
-- Carga fisica en una placa ESP32: pendiente.
-- Compatibilidad con otras placas y bibliotecas: pendiente de pruebas especificas.
+- **Entorno ESP-IDF:** version 6.1 verificada.
+- **Proyecto de ejemplo:** compilacion de `hello_idf` completada correctamente.
+- **Configuracion del objetivo `esp32`:** ejecutada correctamente mediante el backend.
+- **Manejo de entradas invalidas:** probada una ruta inexistente y un proyecto sin `CMakeLists.txt`.
+- **Identificacion de artefactos:** comprobada en el proyecto de ejemplo.
+- **Integracion real con Sketch:** pendiente de validacion.
+- **Comunicacion con Editor/Compilador y Log:** pendiente de pruebas conjuntas.
+- **Deteccion de puertos y carga fisica:** pendientes.
+- **Compatibilidad con otras placas y bibliotecas:** pendiente de validar para cada caso.
 
-La compilacion satisfactoria de `hello_idf` demuestra que el entorno y el backend funcionan para ese proyecto de ejemplo. No demuestra por si sola que el modulo Sketch este completamente integrado ni que todas las placas sean compatibles.
+La compilacion satisfactoria del proyecto de ejemplo demuestra que el entorno puede compilar ese proyecto mediante el backend. No demuestra por si sola que el modulo Sketch este integrado o terminado.

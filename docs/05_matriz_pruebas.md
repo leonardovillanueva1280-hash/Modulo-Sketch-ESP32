@@ -6,7 +6,7 @@
 |---|---|---|---|---|
 | P-01 | Consultar version de Python | Python responde con su version | Completada | Python 3.14.0 |
 | P-02 | Consultar version de ESP-IDF | ESP-IDF responde con su version | Completada | ESP-IDF v6.1 |
-| P-03 | Configurar objetivo ESP32 | El proyecto acepta el objetivo requerido | Pendiente | Salida de `idf.py set-target esp32` |
+| P-03 | Configurar objetivo ESP32 | El backend configura el objetivo requerido | Completada | JSON: comando `set-target esp32` y `target: esp32` |
 | P-04 | Compilar proyecto de ejemplo | El proceso termina con codigo 0 | Completada | Resultado JSON de `hello_idf` |
 | P-05 | Identificar artefactos `.bin` | Se identifican los artefactos relevantes sin archivos auxiliares de CMake | Completada | `hello_idf.bin`, `bootloader.bin` y `partition-table.bin` |
 | P-06 | Manejar una ruta inexistente | El backend informa el error sin declarar exito | Completada | JSON: `success=false`; error de carpeta inexistente |

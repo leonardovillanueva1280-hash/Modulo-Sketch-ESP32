@@ -1,4 +1,4 @@
-"""Backend inicial para Arduino CLI. Requiere instalación externa de Arduino CLI y core ESP32."""
+"""Backend inicial"""
 from __future__ import annotations
 import argparse
 import json

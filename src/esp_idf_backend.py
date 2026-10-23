@@ -1,4 +1,4 @@
-"""Backend experimental ESP-IDF; no usa Arduino IDE ni Arduino CLI."""
+"""Backend experimental ESP-IDF."""
 import argparse
 import json
 import shutil

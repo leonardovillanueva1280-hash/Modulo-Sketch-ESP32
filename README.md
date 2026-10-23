@@ -25,4 +25,4 @@ python src\arduino_backend.py compile "C:\ruta\MiSketch" --fqbn esp32:esp32:esp3
 El FQBN `esp32:esp32:esp32` es solo un ejemplo inicial para una placa ESP32 genérica; no representa todos los modelos. Consulta `arduino-cli board listall esp32` y selecciona el FQBN que corresponda a la placa concreta.
 
 ## Hito del 23/10/2026
-El cronograma corregido dice que el desarrollo principal, archivos, bibliotecas y `.bin` deben estar **encaminados**. Este paquete organiza avances y pendientes; no sustituye las pruebas reales ni demuestra que la compilación funcione en el equipo.
+El cronograma  dice que el desarrollo principal, archivos, bibliotecas y `.bin` deben estar **encaminados**. Este paquete organiza avances y pendientes; no sustituye las pruebas reales ni demuestra que la compilación funcione en el equipo.

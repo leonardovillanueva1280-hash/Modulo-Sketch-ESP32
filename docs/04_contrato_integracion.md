@@ -1,111 +1,107 @@
-# Contrato de integracion — Modulo Sketch ESP32
+# Contrato de integracion — ESP-IDF
 
 ## 1. Objetivo
 
-Definir los datos de entrada y salida del backend ESP-IDF para facilitar su futura integracion con la interfaz Sketch, el Editor/Compilador y el modulo Log.
+Definir la comunicacion entre el modulo Sketch y el backend de compilacion ESP-IDF. Este contrato establece las entradas, el resultado normalizado y las responsabilidades que deben respetar los modulos participantes.
 
-## 2. Entrada del backend
+El backend utiliza ESP-IDF y no debe depender de Arduino IDE ni Arduino CLI.
 
-El backend recibe la ruta de un proyecto ESP-IDF valido.
+## 2. Operacion disponible
 
-Parametros disponibles:
+### Compilar proyecto
 
-- `project_path`: ruta del proyecto que se desea compilar.
-- `--target`: objetivo de compilacion opcional, por ejemplo `esp32`.
-- `--timeout`: limite de tiempo para cada operacion ejecutada, cuando se proporciona.
+El backend recibe la ruta de un proyecto ESP-IDF y ejecuta su compilacion.
 
-El proyecto debe contar con la estructura requerida por ESP-IDF. Un archivo `.ino` aislado no es suficiente para compilar un proyecto ESP-IDF convencional.
+Entradas:
 
-## 3. Salida del backend
+- `project`: ruta de la carpeta raiz del proyecto.
+- `--target`: objetivo ESP-IDF opcional, por ejemplo `esp32` o `esp32s3`.
+- `--timeout`: tiempo maximo por operacion, en segundos. El valor predeterminado es 600.
 
-El backend devuelve un objeto JSON con los datos disponibles de la operacion.
+El proyecto debe contener un archivo `CMakeLists.txt` en su carpeta raiz.
 
-| Campo | Descripcion |
-|---|---|
-| `success` | Indica si la operacion finalizo correctamente. |
-| `returncode` | Codigo de salida del proceso ejecutado. |
-| `stdout` | Salida estandar del proceso. |
-| `stderr` | Mensajes de error y salida de error del proceso. |
-| `command` | Comandos ejecutados por el backend. |
-| `framework` | Framework utilizado; debe indicar `ESP-IDF`. |
-| `project_path` | Ruta del proyecto procesado. |
-| `build_path` | Ruta del directorio de compilacion. |
-| `artifacts_dir` | Directorio donde se buscan los artefactos generados. |
-| `bin_files` | Lista de archivos `.bin` identificados. |
-| `target` | Objetivo solicitado, si se proporciono. |
-| `error` | Informacion adicional del error, cuando corresponda. |
+Ejemplo de ejecucion:
 
-La presencia de un campo depende del resultado y de la implementacion vigente. Los consumidores deben manejar campos opcionales y resultados de error sin asumir que siempre existiran archivos `.bin`.
+`python src/esp_idf_backend.py "ruta_del_proyecto" --target esp32`
 
-## 4. Responsabilidades de los modulos
+## 3. Resultado normalizado
 
-### Sketch
+El backend devuelve un objeto JSON con los siguientes campos:
 
-- Recibir la accion solicitada por el usuario.
-- Proporcionar la ruta del proyecto y el objetivo cuando corresponda.
-- Mostrar el resultado devuelto por el backend.
-- No declarar una operacion exitosa si el backend informa un error.
+- `success`: indica si la operacion de compilacion termino correctamente.
+- `returncode`: codigo de salida del ultimo comando ejecutado, cuando existe.
+- `stdout`: salida estandar del proceso.
+- `stderr`: salida de error del proceso.
+- `command`: lista de comandos ejecutados.
+- `framework`: nombre del framework utilizado; debe ser `ESP-IDF`.
+- `project_path`: ruta del proyecto.
+- `build_path`: ruta de la carpeta de compilacion.
+- `artifacts_dir`: carpeta donde se encuentran los artefactos.
+- `bin_files`: rutas de los archivos `.bin` detectados despues de una compilacion exitosa.
+- `target`: objetivo solicitado, si se proporciono.
+- `error`: descripcion del error cuando la operacion no termina correctamente.
 
-### Backend ESP-IDF
+Los campos deben conservar sus nombres para facilitar la integracion con los demas modulos.
 
-- Validar la entrada necesaria.
-- Ejecutar las operaciones de ESP-IDF admitidas.
-- Capturar los codigos de salida y los mensajes del proceso.
-- Identificar los artefactos disponibles.
-- Devolver el resultado en el formato acordado.
+## 4. Responsabilidades del backend
 
-### Editor/Compilador
+El backend es responsable de:
 
-- Definir como se organiza el codigo del editor para convertirlo en un proyecto ESP-IDF valido.
-- Acordar con Sketch la forma de entregar la ruta del proyecto.
-- Validar conjuntamente la compilacion de un proyecto generado o preparado desde el editor.
+- Validar la existencia de la carpeta del proyecto.
+- Validar que exista `CMakeLists.txt`.
+- Verificar que `idf.py` este disponible.
+- Configurar el objetivo solicitado cuando corresponda.
+- Ejecutar la compilacion.
+- Capturar la salida y el codigo de retorno.
+- Identificar los archivos `.bin` relevantes despues de una compilacion exitosa.
+- Devolver el resultado normalizado en JSON.
 
-### Log/Monitorizacion
+El backend no declara que el firmware fue cargado en una placa. La compilacion exitosa no equivale a una carga exitosa.
 
-- Recibir o mostrar los mensajes de compilacion.
-- Distinguir resultados exitosos, advertencias y errores.
-- Conservar informacion util para diagnosticar fallos.
+## 5. Responsabilidades de los otros modulos
 
-La comunicacion entre estos modulos debe comprobarse mediante pruebas conjuntas antes de considerarse implementada.
+### Editor / Sketch
 
-## 5. Flujo de operacion
+Debe proporcionar la ruta del proyecto que se desea compilar. La forma exacta de obtener y compartir esa ruta debe acordarse con el responsable del Editor.
 
-1. El usuario solicita compilar.
-2. Sketch proporciona la ruta del proyecto y, si corresponde, el objetivo.
-3. El backend ejecuta la compilacion con ESP-IDF.
-4. El backend recopila el resultado del proceso.
-5. Se identifican los artefactos disponibles.
-6. El resultado se entrega a Sketch y se comunica al modulo Log segun el contrato que acuerde el equipo.
+### IDE principal / seleccion de placa
 
-La carga de firmware y la monitorizacion serial se consideran operaciones independientes y pendientes de integracion.
+Debe comunicar el objetivo ESP-IDF seleccionado. La equivalencia entre las opciones visibles de placa y los objetivos admitidos debe acordarse con el responsable del IDE principal.
 
-## 6. Manejo de errores
+### Log / Monitorizacion
 
-- Una ruta inexistente no debe producir un resultado exitoso.
-- Un proyecto sin la estructura requerida debe reportar el problema.
-- Una compilacion fallida no debe presentarse como exitosa.
-- No deben reportarse archivos antiguos como si fueran resultado de una compilacion fallida.
-- Los modulos consumidores deben poder mostrar errores sin cerrar inesperadamente la interfaz.
+Debe recibir y presentar los mensajes de compilacion y los errores. El formato y mecanismo de comunicacion entre modulos quedan pendientes de acuerdo.
 
-## 7. Estado de integracion
+### Carga de firmware
 
-- Backend con proyecto de ejemplo `hello_idf`: probado.
-- Resultado JSON y codigo de retorno: verificados en la prueba realizada.
-- Identificacion de archivos `.bin`: verificada para el ejemplo.
-- Integracion con la interfaz Sketch: pendiente.
-- Comunicacion con Editor/Compilador: pendiente.
-- Comunicacion con Log: pendiente.
-- Deteccion de puertos y carga fisica: pendientes.
+La deteccion de puertos y la carga del firmware requieren una implementacion y pruebas independientes. No forman parte de las operaciones actualmente verificadas en este backend.
 
-## 8. Acuerdos pendientes del equipo
+## 6. Eventos propuestos para el log
 
-Antes de conectar los modulos, el equipo debe acordar:
+Se proponen los siguientes eventos:
 
-- El formato definitivo de las solicitudes y respuestas.
-- La forma en que el editor prepara un proyecto ESP-IDF.
-- La ubicacion de los proyectos temporales y de los artefactos.
-- La forma de enviar los mensajes al modulo Log.
-- El manejo de cancelaciones, tiempos de espera y errores.
-- Las pruebas conjuntas y sus criterios de aceptacion.
+- `compile_started`
+- `compile_succeeded`
+- `compile_failed`
+- `upload_started`
+- `upload_succeeded`
+- `upload_failed`
 
-Este contrato describe el estado actual y la integracion prevista. Los puntos pendientes no deben considerarse implementados hasta contar con pruebas verificables.
+Estos eventos son una propuesta de integracion. El backend actual devuelve un resultado JSON, pero aun no implementa por si solo un sistema de eventos compartido.
+
+## 7. Acuerdos pendientes
+
+- [ ] Confirmar como recibe Sketch la ruta del proyecto desde Editor.
+- [ ] Confirmar como se comunica el objetivo seleccionado por el IDE principal.
+- [ ] Definir como invoca Sketch al backend.
+- [ ] Definir como recibe Log el resultado y los mensajes.
+- [ ] Definir la deteccion de puertos.
+- [ ] Definir la carga del firmware.
+- [ ] Definir como se guardan o exportan los archivos `.bin`.
+- [ ] Validar el contrato con los responsables de los modulos participantes.
+
+## 8. Limites de las pruebas actuales
+
+Se ha comprobado la compilacion de un proyecto de ejemplo ESP-IDF con objetivo `esp32`, la identificacion de archivos `.bin` y el manejo de dos entradas invalidas.
+
+Estas pruebas no demuestran aun la integracion completa con el Editor, el IDE principal, Log ni una placa fisica.

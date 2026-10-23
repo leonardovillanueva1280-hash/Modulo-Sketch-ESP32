@@ -14,7 +14,7 @@ Base de documentación y backend inicial para el área Investigación / Análisi
 - `src/arduino_backend.py`
 
 ## Requisitos
-Windows, Python 3, Arduino CLI y el core ESP32 instalado en Arduino CLI. El backend no instala esas dependencias.
+Windows, Python 3 y el core ESP32 instalado. El backend no instala esas dependencias.
 
 ## Uso
 ```powershell

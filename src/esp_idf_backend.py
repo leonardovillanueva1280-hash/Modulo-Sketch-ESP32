@@ -131,12 +131,14 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
         # Solo informar artefactos si esta compilacion fue exitosa.
         bin_files = []
         if compilacion_ok and build.is_dir():
-           bin_files = sorted(
-    str(archivo.resolve())
-    for archivo in build.rglob("*.bin")
-    if archivo.is_file()
-    and "CMakeFiles" not in archivo.parts
-)
+                   bin_files = []
+        if compilacion_ok and build.is_dir():
+            bin_files = sorted(
+                str(archivo.resolve())
+                for archivo in build.rglob("*.bin")
+                if archivo.is_file()
+                and "CMakeFiles" not in archivo.parts
+            )
 
         return crear_resultado(
             success=compilacion_ok,

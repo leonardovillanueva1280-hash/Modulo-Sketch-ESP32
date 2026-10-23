@@ -1,3 +1,4 @@
+
 """Backend de compilacion ESP-IDF para el modulo Sketch."""
 
 import argparse
@@ -85,6 +86,7 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
     comandos = []
 
     try:
+        # Configurar el objetivo de compilacion si se especifico.
         if target:
             comando_target = [idf_py, "set-target", target]
             comandos.append(comando_target)
@@ -100,7 +102,7 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
                 check=False,
             )
 
-                  if configuracion.returncode != 0:
+            if configuracion.returncode != 0:
                 detalle = (
                     configuracion.stderr.strip()
                     or configuracion.stdout.strip()
@@ -121,6 +123,7 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
                     ),
                 )
 
+        # Ejecutar la compilacion del proyecto.
         comando_build = [idf_py, "build"]
         comandos.append(comando_build)
 
@@ -137,16 +140,24 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
 
         compilacion_ok = proceso.returncode == 0
 
-        # Solo informar artefactos si esta compilacion fue exitosa.
+        # Informar los archivos BIN solo si la compilacion fue exitosa.
         bin_files = []
-        if compilacion_ok and build.is_dir():
-                   bin_files = []
+
         if compilacion_ok and build.is_dir():
             bin_files = sorted(
                 str(archivo.resolve())
                 for archivo in build.rglob("*.bin")
                 if archivo.is_file()
                 and "CMakeFiles" not in archivo.parts
+            )
+
+        detalle_error = None
+
+        if not compilacion_ok:
+            detalle_error = (
+                proceso.stderr.strip()
+                or proceso.stdout.strip()
+                or "La compilacion fallo sin proporcionar detalles."
             )
 
         return crear_resultado(
@@ -159,7 +170,7 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
             build=build,
             bin_files=bin_files,
             target=target,
-            error=None if compilacion_ok else "La compilacion fallo.",
+            error=detalle_error,
         )
 
     except subprocess.TimeoutExpired:
@@ -182,19 +193,23 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
 
 
 def main():
+    """Procesa los argumentos de la linea de comandos."""
     parser = argparse.ArgumentParser(
         description="Backend ESP-IDF para ESP32, sin Arduino CLI."
     )
+
     parser.add_argument(
         "project",
         help="Ruta de la carpeta raiz de un proyecto ESP-IDF.",
     )
+
     parser.add_argument(
         "--timeout",
         type=int,
         default=600,
         help="Tiempo maximo por operacion, en segundos.",
     )
+
     parser.add_argument(
         "--target",
         help="Objetivo ESP-IDF, por ejemplo esp32 o esp32s3.",
@@ -209,6 +224,7 @@ def main():
     )
 
     print(json.dumps(resultado, ensure_ascii=False, indent=2))
+
     return 0 if resultado["success"] else 1
 
 

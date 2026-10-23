@@ -9,8 +9,8 @@
 | P-03 | Configurar objetivo ESP32 | El proyecto acepta el objetivo requerido | Pendiente | Salida de `idf.py set-target esp32` |
 | P-04 | Compilar proyecto de ejemplo | El proceso termina con codigo 0 | Completada | Resultado JSON de `hello_idf` |
 | P-05 | Identificar artefactos `.bin` | Se identifican los artefactos relevantes sin archivos auxiliares de CMake | Completada | `hello_idf.bin`, `bootloader.bin` y `partition-table.bin` |
-| P-06 | Manejar una ruta inexistente | El backend informa el error sin declarar exito | Pendiente | Resultado JSON |
-| P-07 | Manejar un proyecto invalido | El backend informa la ausencia de `CMakeLists.txt` | Pendiente | Resultado JSON |
+| P-06 | Manejar una ruta inexistente | El backend informa el error sin declarar exito | Completada | JSON: `success=false`; error de carpeta inexistente |
+| P-07 | Manejar un proyecto invalido | El backend informa la ausencia de `CMakeLists.txt` | Completada | JSON: `success=false`; error por falta de `CMakeLists.txt` |
 | P-08 | Detectar puertos | Se identifican los puertos disponibles mediante una implementacion definida | Pendiente | Salida de la herramienta seleccionada |
 | P-09 | Cargar firmware en hardware | La carga termina correctamente en una placa real | Pendiente | Registro de carga y modelo de placa |
 | P-10 | Compilar un proyecto con biblioteca | El proyecto que utiliza la biblioteca compila correctamente | Pendiente | Proyecto y registro de compilacion |

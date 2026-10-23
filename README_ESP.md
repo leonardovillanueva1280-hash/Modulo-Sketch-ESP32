@@ -1,4 +1,4 @@
-# Propuesta de migración a ESP-IDF
+# Propuesta de ESP-IDF
 
 - `src/esp_idf_backend.py`: adaptador que invoca `idf.py build`.
 - `examples/hello_idf/`: proyecto de ejemplo en C.

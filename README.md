@@ -2,7 +2,7 @@
 
 Base de documentación y backend inicial para el área Investigación / Análisis e Integración, y para el trabajo compartido con Xavi en bibliotecas, compilación y exportación de `.bin`.
 
-**Importante:** esto es una base de avance, no un proyecto validado. No se afirma que haya compilado ni que se haya probado con hardware. Registra solo pruebas ejecutadas realmente.
+**Ojo:** esto es una base de avance, aun no se afirma que haya compilado ni que se haya probado con hardware. Registra solo pruebas ejecutadas realmente.
 
 ## Archivos
 - `docs/01_alcance_requisitos.md`

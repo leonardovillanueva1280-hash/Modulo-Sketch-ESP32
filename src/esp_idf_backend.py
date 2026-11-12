@@ -3,9 +3,104 @@
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
+
+
+# Ruta predeterminada de ESP-IDF 6.1.
+# Si IDF_PATH existe en el entorno, se utiliza primero.
+IDF_PATH_PREDETERMINADO = Path(r"C:\espp\v6.1\esp-idf")
+
+
+def localizar_idf():
+    """Localiza la instalacion de ESP-IDF."""
+    candidatos = []
+
+    idf_path_env = os.environ.get("IDF_PATH")
+
+    if idf_path_env:
+        candidatos.append(Path(idf_path_env))
+
+    candidatos.append(IDF_PATH_PREDETERMINADO)
+
+    for candidato in candidatos:
+        if (candidato / "export.bat").is_file():
+            return candidato.resolve()
+
+    return None
+
+
+def preparar_entorno_idf():
+    """Ejecuta export.bat y recupera las variables de ESP-IDF."""
+    idf_path = localizar_idf()
+
+    if idf_path is None:
+        return None, None, None, (
+            "No se encontro ESP-IDF. Verifica la instalacion "
+            "o configura la variable IDF_PATH."
+        )
+
+    export_bat = idf_path / "export.bat"
+    idf_script = idf_path / "tools" / "idf.py"
+
+    if not idf_script.is_file():
+        return None, None, None, (
+            f"No se encontro el archivo de ESP-IDF: {idf_script}"
+        )
+
+    # Configurar UTF-8, activar ESP-IDF y recuperar sus variables.
+    comando_entorno = (
+        f'chcp 65001 >nul && '
+        f'call "{export_bat}" >nul && '
+        f'set'
+    )
+
+    proceso_entorno = subprocess.run(
+        comando_entorno,
+        shell=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=120,
+        check=False,
+    )
+
+    if proceso_entorno.returncode != 0:
+        detalle = (
+            proceso_entorno.stderr.strip()
+            or proceso_entorno.stdout.strip()
+            or "No se pudo activar el entorno ESP-IDF."
+        )
+
+        return None, None, None, detalle
+
+    # Recuperar las variables del proceso cmd.exe.
+    entorno = os.environ.copy()
+
+    for linea in proceso_entorno.stdout.splitlines():
+        if "=" in linea and not linea.startswith("="):
+            clave, valor = linea.split("=", 1)
+            entorno[clave] = valor
+
+    # Evitar problemas de codificacion en Windows.
+    entorno["PYTHONUTF8"] = "1"
+    entorno["PYTHONIOENCODING"] = "utf-8"
+
+    # export.bat coloca el Python virtual de ESP-IDF al inicio del PATH.
+    python_exe = shutil.which(
+        "python",
+        path=entorno.get("PATH"),
+    )
+
+    if not python_exe:
+        return None, None, None, (
+            "ESP-IDF se activo, pero no se encontro su Python virtual."
+        )
+
+    return python_exe, idf_script, entorno, None
 
 
 def crear_resultado(
@@ -41,8 +136,8 @@ def crear_resultado(
     return resultado
 
 
-def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
-    """Compila un proyecto ESP-IDF y devuelve un resultado normalizado."""
+def compilar_proyecto(ruta_proyecto, timeout=1800, target=None):
+    """Prepara ESP-IDF, compila el proyecto y devuelve un JSON normalizado."""
     proyecto = Path(ruta_proyecto).expanduser().resolve()
     build = proyecto / "build"
 
@@ -62,19 +157,6 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
             target=target,
         )
 
-    idf_py = shutil.which("idf.py")
-
-    if not idf_py:
-        return crear_resultado(
-            error=(
-                "No se encontro idf.py. Abre una terminal "
-                "ESP-IDF configurada e intenta de nuevo."
-            ),
-            proyecto=proyecto,
-            build=build,
-            target=target,
-        )
-
     if timeout <= 0:
         return crear_resultado(
             error="El tiempo maximo debe ser mayor que cero.",
@@ -86,14 +168,34 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
     comandos = []
 
     try:
-        # Configurar el objetivo de compilacion si se especifico.
+        # Preparar automaticamente el entorno ESP-IDF.
+        python_exe, idf_script, entorno, error_entorno = (
+            preparar_entorno_idf()
+        )
+
+        if error_entorno:
+            return crear_resultado(
+                proyecto=proyecto,
+                build=build,
+                target=target,
+                error=error_entorno,
+            )
+
+        # Configurar el objetivo si fue especificado.
         if target:
-            comando_target = [idf_py, "set-target", target]
+            comando_target = [
+                python_exe,
+                str(idf_script),
+                "set-target",
+                target,
+            ]
+
             comandos.append(comando_target)
 
             configuracion = subprocess.run(
                 comando_target,
                 cwd=str(proyecto),
+                env=entorno,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
@@ -123,13 +225,19 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
                     ),
                 )
 
-        # Ejecutar la compilacion del proyecto.
-        comando_build = [idf_py, "build"]
+        # Ejecutar la compilacion.
+        comando_build = [
+            python_exe,
+            str(idf_script),
+            "build",
+        ]
+
         comandos.append(comando_build)
 
         proceso = subprocess.run(
             comando_build,
             cwd=str(proyecto),
+            env=entorno,
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -140,7 +248,7 @@ def compilar_proyecto(ruta_proyecto, timeout=600, target=None):
 
         compilacion_ok = proceso.returncode == 0
 
-        # Informar los archivos BIN solo si la compilacion fue exitosa.
+        # Detectar los archivos BIN generados.
         bin_files = []
 
         if compilacion_ok and build.is_dir():
@@ -206,7 +314,7 @@ def main():
     parser.add_argument(
         "--timeout",
         type=int,
-        default=600,
+        default=1800,
         help="Tiempo maximo por operacion, en segundos.",
     )
 

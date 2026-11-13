@@ -83,7 +83,14 @@ def preparar_entorno_idf():
     for linea in proceso_entorno.stdout.splitlines():
         if "=" in linea and not linea.startswith("="):
             clave, valor = linea.split("=", 1)
-            entorno[clave] = valor
+
+            # Windows trata las variables de entorno sin distinguir
+            # mayusculas y minusculas. Normalizar PATH evita usar
+            # accidentalmente el Python global.
+            if clave.lower() == "path":
+                entorno["PATH"] = valor
+            else:
+                entorno[clave] = valor
 
     # Evitar problemas de codificacion en Windows.
     entorno["PYTHONUTF8"] = "1"

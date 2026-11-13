@@ -1,0 +1,20 @@
+﻿{
+  "success": false,
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "No module named 'rich_click'\nThis usually means that \"idf.py\" was not spawned within an ESP-IDF shell environment or the python virtual environment used by \"idf.py\" is corrupted.\nPlease use idf.py only in an ESP-IDF shell environment. If problem persists, please try to install ESP-IDF tools again as described in the Get Started guide.\n",
+  "command": [
+    [
+      "C:\\Users\\Equipo\\AppData\\Local\\Programs\\Python\\Python314\\python.EXE",
+      "C:\\espp\\v6.1\\esp-idf\\tools\\idf.py",
+      "build"
+    ]
+  ],
+  "framework": "ESP-IDF",
+  "project_path": "C:\\Users\\Equipo\\Documents\\Esp\\Migracion_ESP_IDF_Sketch\\Migracion_ESP_IDF_Sketch\\examples\\hello_idf",
+  "build_path": "C:\\Users\\Equipo\\Documents\\Esp\\Migracion_ESP_IDF_Sketch\\Migracion_ESP_IDF_Sketch\\examples\\hello_idf\\build",
+  "artifacts_dir": "C:\\Users\\Equipo\\Documents\\Esp\\Migracion_ESP_IDF_Sketch\\Migracion_ESP_IDF_Sketch\\examples\\hello_idf\\build",
+  "bin_files": [],
+  "target": null,
+  "error": "No module named 'rich_click'\nThis usually means that \"idf.py\" was not spawned within an ESP-IDF shell environment or the python virtual environment used by \"idf.py\" is corrupted.\nPlease use idf.py only in an ESP-IDF shell environment. If problem persists, please try to install ESP-IDF tools again as described in the Get Started guide."
+}

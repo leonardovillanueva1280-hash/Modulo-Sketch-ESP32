@@ -1,0 +1,102 @@
+"""
+Módulo de Depuración y Diagnóstico para ESP32 (Área 4)
+Responsable: MARINO XAVIER FIERROS PRIETO
+"""
+from __future__ import annotations
+import re
+from typing import Dict, List, Any
+
+
+PATTERNS = [
+    # 1. Librería no encontrada
+    {
+        "category": "LIBRERIA_FALTANTE",
+        "title": "Biblioteca o archivo de cabecera no encontrado",
+        "pattern": r"(?P<file>.+?):(?P<line>\d+):\d+:\s+fatal error:\s+(?P<header>.+?):\s+No such file or directory",
+        "suggestion": "Instala la biblioteca correspondiente a '{header}' desde el gestor de bibliotecas o verifica las rutas de inclusión."
+    },
+    # 2. Error de sintaxis o declaración no encontrada
+    {
+        "category": "SINTAXIS_DECLARACION",
+        "title": "Error de sintaxis o variable/función no declarada",
+        "pattern": r"(?P<file>.+?):(?P<line>\d+):\d+:\s+error:\s+'(?P<symbol>.+?)'\s+was not declared in this scope",
+        "suggestion": "Verifica que el símbolo '{symbol}' esté declarado antes de usarlo o que la biblioteca requerida esté incluida."
+    },
+    # 3. FQBN no válido o placa no instalada
+    {
+        "category": "CONFIGURACION_PLACA",
+        "title": "FQBN o placa ESP32 no reconocida",
+        "pattern": r"Invalid FQBN|Board '.*' not found|core 'esp32:esp32' is not installed",
+        "suggestion": "Asegúrate de tener instalado el core de ESP32 en arduino-cli y especifica un FQBN válido (ej. 'esp32:esp32:esp32')."
+    },
+    # 4. Desbordamiento de memoria DRAM / Flash
+    {
+        "category": "DESBORDAMIENTO_MEMORIA",
+        "title": "Desbordamiento de memoria RAM o Flash",
+        "pattern": r"region `(?P<region>.+?)' overflowed by (?P<bytes>\d+) bytes",
+        "suggestion": "Reduce el tamaño de arreglos globales o usa la macro F() / PROGMEM para guardar cadenas en la memoria Flash."
+    },
+    # 5. Error de conexión / Flashing (esptool)
+    {
+        "category": "CONEXION_PUERTO",
+        "title": "Fallo de conexión o sincronización con el ESP32",
+        "pattern": r"Failed to connect to ESP32|Timed out waiting for packet header|A fatal error occurred",
+        "suggestion": "1. Mantén presionado el botón 'BOOT' durante la carga.\n2. Revisa el cable USB.\n3. Selecciona el puerto COM correcto."
+    },
+    # 6. Brownout Detector (Caída de voltaje)
+    {
+        "category": "ALIMENTACION_VOLTAJE",
+        "title": "Caída de voltaje detectada (Brownout Reset)",
+        "pattern": r"Brownout detector was triggered",
+        "suggestion": "Conecta el ESP32 a un puerto USB con mayor corriente (USB 3.0) o agrega un capacitor electrolítico entre 3V3 y GND."
+    },
+    # 7. Panic Handler / Guru Meditation
+    {
+        "category": "PANICO_RUNTIME",
+        "title": "Excepción crítica en tiempo de ejecución (Guru Meditation)",
+        "pattern": r"Guru Meditation Error: Core\s+(?P<core>\d+)\s+panic'ed\s+\((?P<cause>.*?)\)",
+        "suggestion": "Ocurrió un fallo de memoria o acceso nulo. Inspecciona la pila de llamadas (Backtrace) o punteros no inicializados."
+    }
+]
+
+
+def analyze_output(stdout: str, stderr: str) -> Dict[str, Any]:
+    """
+    Parsea stdout y stderr producidos por arduino-cli o idf.py.
+    Retorna un diccionario de diagnóstico de depuración estructurado.
+    """
+    text = f"{stdout}\n{stderr}"
+    detected_errors: List[Dict[str, Any]] = []
+
+    for rule in PATTERNS:
+        for match in re.finditer(rule["pattern"], text, re.IGNORECASE | re.MULTILINE):
+            match_dict = match.groupdict() if match.lastgroup else {}
+            header = match_dict.get("header", "")
+            symbol = match_dict.get("symbol", "")
+            
+            sug = rule["suggestion"]
+            if "{header}" in sug:
+                sug = sug.format(header=header)
+            elif "{symbol}" in sug:
+                sug = sug.format(symbol=symbol)
+
+            detected_errors.append({
+                "category": rule["category"],
+                "title": rule["title"],
+                "raw_match": match.group(0).strip(),
+                "file": match_dict.get("file"),
+                "line": int(match_dict["line"]) if match_dict.get("line") else None,
+                "suggestion": sug
+            })
+
+    has_errors = len(detected_errors) > 0
+    return {
+        "has_diagnostics": has_errors,
+        "error_count": len(detected_errors),
+        "classified_errors": detected_errors,
+        "summary": (
+            f"Se detectaron {len(detected_errors)} problema(s) de compilación/depuración."
+            if has_errors
+            else "Ejecución limpia. No se detectaron patrones de error conocidos."
+        )
+    }
